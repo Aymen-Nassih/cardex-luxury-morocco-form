@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addClientNote } from '../../../../../../../lib/supabase-db';
+import { addClientNote } from '../../../../../../lib/supabase-db';
 
 export async function POST(request, { params }) {
   try {
