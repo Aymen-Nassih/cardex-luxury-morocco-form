@@ -1,10 +1,11 @@
 # CARDEX Luxury Morocco Travel Form (Next.js)
 
-A modern, full-stack web application for CARDEX's luxury tourism and B2B travel clients visiting Morocco. This Next.js application provides a sophisticated form system for gathering pre-arrival needs and inquiries, with integrated admin dashboard and Salesforce connectivity.
+A modern, full-stack web application for CARDEX's luxury tourism and B2B travel clients visiting Morocco. This Next.js application provides a sophisticated form system for gathering pre-arrival needs and inquiries, with integrated admin dashboard and Supabase authentication.
 
 ## 🚀 Features
 
 - **Multi-step Client Form**: Professional form with validation for individuals, groups, and families
+- **Supabase Authentication**: Secure admin login with role-based access control
 - **Admin Dashboard**: Comprehensive client management with search, filtering, and status tracking
 - **Database Integration**: SQLite with proper relationships and audit trails
 - **Responsive Design**: Mobile-first approach with CARDEX branding
@@ -17,20 +18,21 @@ A modern, full-stack web application for CARDEX's luxury tourism and B2B travel 
 - **Frontend**: Next.js 16, React 19, Tailwind CSS
 - **Backend**: Next.js API Routes
 - **Database**: SQLite with better-sqlite3
+- **Authentication**: Supabase Auth
 - **Styling**: Tailwind CSS with custom CARDEX theme
-- **TypeScript**: Full type safety
 - **Deployment**: Ready for Vercel/Netlify
 
 ## 📋 Prerequisites
 
 - Node.js 18+
 - npm or yarn
+- Supabase account (for authentication)
 
 ## 🚀 Quick Start
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/cardex-nextjs.git
+   git clone https://github.com/Aymen-Nassih/cardex-luxury-morocco-form.git
    cd cardex-nextjs
    ```
 
@@ -39,39 +41,95 @@ A modern, full-stack web application for CARDEX's luxury tourism and B2B travel 
    npm install
    ```
 
-3. **Initialize database**
+3. **Set up environment variables**
+   Create `.env.local`:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://cpdyuabpnaeljcxlnelm.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Initialize database**
    ```bash
    node init-db.js
    ```
 
-4. **Start development server**
+5. **Set up Supabase authentication**
+   - Create admin user in Supabase Authentication
+   - Add user to admin_users table
+   - Run the SQL setup script in Supabase
+
+6. **Start development server**
    ```bash
    npm run dev
    ```
 
-5. **Open your browser**
+7. **Open your browser**
    - Client Form: http://localhost:3000
+   - Admin Login: http://localhost:3000/login
    - Admin Dashboard: http://localhost:3000/admin
 
-## 📁 Project Structure
+## 🔐 Authentication Setup
+
+### 1. Supabase Configuration
+- Create project at https://supabase.com
+- Get your URL and anon key from Settings → API
+
+### 2. Database Setup
+Run this SQL in Supabase SQL Editor:
+```sql
+-- Create admin_users table
+CREATE TABLE admin_users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'viewer',
+  can_modify BOOLEAN DEFAULT false,
+  can_delete BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT now()
+);
+
+-- Enable Row Level Security
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Allow authenticated users to read admin_users"
+ON admin_users FOR SELECT TO authenticated USING (true);
+
+-- Insert admin user
+INSERT INTO admin_users (email, full_name, role, can_modify, can_delete)
+VALUES ('your-email@example.com', 'Admin Name', 'admin', true, true);
+```
+
+### 3. Create Auth User
+- Go to Authentication → Users → Add User
+- Email: your-email@example.com
+- Password: your-password
+- ✅ Check "Auto Confirm User"
+
+## � Project Structure
 
 ```
 cardex-nextjs/
 ├── app/                          # Next.js App Router
 │   ├── page.js                   # Home page with form
+│   ├── login/                    # Authentication
 │   ├── admin/                    # Admin dashboard
-│   │   └── page.js
+│   │   ├── page.js
+│   │   └── users/                # User management
 │   ├── api/                      # API routes
 │   │   ├── submit-form/
 │   │   ├── clients/
-│   │   └── stats/
+│   │   ├── stats/
+│   │   └── users/
 │   └── components/               # React components
 ├── lib/
-│   └── database.js               # Database helper
+│   ├── database.js               # SQLite connection
+│   └── supabase.js               # Supabase client
 ├── database/
 │   └── cardex.db                 # SQLite database
-├── public/                       # Static assets
-└── styles/                       # Global styles
+├── middleware.js                 # Route protection
+├── .env.local                    # Environment vars
+└── tailwind.config.js           # Styling config
 ```
 
 ## 🔧 API Endpoints
@@ -90,21 +148,24 @@ cardex-nextjs/
 ## 🎨 Branding
 
 **CARDEX Color Palette:**
-- Primary: Burgundy (#800020)
-- Secondary: Cream (#FFFDD0)
-- Accent: Gold (#FFD700)
+- Primary: Morocco Blue (#2563eb)
+- Secondary: Morocco Sand (#f4f1e8)
+- Accent: Morocco Orange (#ea580c)
+- Teal: Morocco Teal (#14b8a6)
 
 **Typography:**
-- Headers: Amiri (Arabic-inspired)
-- Body: Noto Sans Arabic
+- Headers: Modern sans-serif stack
+- Body: Clean, readable fonts
 
 ## 🔒 Security Features
 
+- Supabase authentication with JWT
+- Row Level Security (RLS) policies
 - Input sanitization and validation
 - GDPR compliance with consent tracking
 - SQL injection prevention
 - XSS protection
-- Data minimization principles
+- Secure API endpoints
 
 ## 📱 Mobile Responsiveness
 
