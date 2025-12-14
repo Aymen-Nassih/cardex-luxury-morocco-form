@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAdminUsers, createAdminUser, deleteAdminUser } from '../../../../lib/supabase-db';
+import { getAdminUsers, createAdminUser, deleteAdminUser } from '../../../../../lib/supabase-db';
 
 export async function GET() {
   try {

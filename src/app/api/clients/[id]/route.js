@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getClientById, updateClient, logModification } from '../../../../../lib/supabase-db';
+import { getClientById, updateClient, logModification } from '../../../../../../../lib/supabase-db';
 
 export async function GET(request, { params }) {
   try {
