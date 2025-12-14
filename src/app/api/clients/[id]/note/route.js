@@ -1,32 +1,30 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database.js';
+import { addClientNote } from '../../../../../lib/supabase-db';
 
 export async function POST(request, { params }) {
   try {
-    const db = getDatabase();
-    const clientId = params.id;
-    const { note, created_by } = await request.json();
+    const { id } = params;
+    const body = await request.json();
+    const { admin_email, note } = body;
 
-    const result = db.prepare(`
-      INSERT INTO client_notes (client_id, note, created_by, created_at)
-      VALUES (?, ?, ?, ?)
-    `).run(
-      clientId,
-      note,
-      created_by || 'system',
-      new Date().toISOString()
-    );
+    if (!admin_email || !note) {
+      return NextResponse.json(
+        { success: false, message: 'Admin email and note are required' },
+        { status: 400 }
+      );
+    }
+
+    const clientNote = await addClientNote(id, admin_email, note);
 
     return NextResponse.json({
       success: true,
-      note_id: result.lastInsertRowid,
-      message: 'Note added successfully'
+      note: clientNote
     });
-
   } catch (error) {
-    console.error('Note creation error:', error);
-    return NextResponse.json({
-      error: 'Failed to add note'
-    }, { status: 500 });
+    console.error('Error adding note:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to add note' },
+      { status: 500 }
+    );
   }
 }

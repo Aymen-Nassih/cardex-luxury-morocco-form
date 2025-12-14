@@ -1,78 +1,52 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database.js';
+import { createClient, createTravelers } from '../../../../lib/supabase-db';
 
 export async function POST(request) {
   try {
-    const db = getDatabase();
-    const data = await request.json();
+    const body = await request.json();
+    const { additional_travelers, ...clientData } = body;
 
-    // Insert main client data
-    const clientResult = db.prepare(`
-      INSERT INTO clients (
-        full_name, email, phone, number_of_travelers, group_type,
-        arrival_date, departure_date,
-        dietary_restrictions, accessibility_needs, preferred_language,
-        custom_activities, food_preferences, additional_inquiries,
-        gdpr_consent, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      data.full_name,
-      data.email,
-      data.phone,
-      data.number_of_travelers,
-      data.group_type,
-      data.arrival_date || null,
-      data.departure_date || null,
-      JSON.stringify(data.dietary_restrictions || []),
-      JSON.stringify(data.accessibility_needs || []),
-      data.preferred_language || null,
-      data.custom_activities || null,
-      data.food_preferences || null,
-      data.additional_inquiries || null,
-      data.gdpr_consent ? 1 : 0,
-      'Pending'
-    );
+    // Generate unique client ID
+    const clientId = `CARD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    const clientId = clientResult.lastInsertRowid;
+    // Prepare client data
+    const clientPayload = {
+      id: clientId,
+      full_name: clientData.full_name,
+      email: clientData.email,
+      phone: clientData.phone,
+      number_of_travelers: clientData.number_of_travelers,
+      group_type: clientData.group_type,
+      arrival_date: clientData.arrival_date || null,
+      departure_date: clientData.departure_date || null,
+      dietary_restrictions: JSON.stringify(clientData.dietary_restrictions || []),
+      accessibility_needs: JSON.stringify(clientData.accessibility_needs || []),
+      preferred_language: clientData.preferred_language || null,
+      custom_activities: clientData.custom_activities || null,
+      food_preferences: clientData.food_preferences || null,
+      additional_inquiries: clientData.additional_inquiries || null,
+      gdpr_consent: clientData.gdpr_consent || false,
+      status: 'Pending'
+    };
 
-    // Insert additional travelers if any
-    if (data.additional_travelers && data.additional_travelers.length > 0) {
-      const travelerStmt = db.prepare(`
-        INSERT INTO additional_travelers (
-          client_id, traveler_number, name, email, phone, age_group, relationship,
-          dietary_restrictions, special_notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+    // Create client
+    const client = await createClient(clientPayload);
 
-      for (let i = 0; i < data.additional_travelers.length; i++) {
-        const traveler = data.additional_travelers[i];
-        if (traveler.name) { // Only insert if name is provided
-          travelerStmt.run(
-            clientId,
-            i + 1, // traveler_number starts from 1
-            traveler.name,
-            traveler.email || null,
-            traveler.phone || null,
-            traveler.age_group || null,
-            traveler.relationship || null,
-            JSON.stringify(traveler.dietary_restrictions || []),
-            traveler.special_notes || null
-          );
-        }
-      }
+    // Create additional travelers if any
+    if (additional_travelers && additional_travelers.length > 0) {
+      await createTravelers(clientId, additional_travelers);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Form submitted successfully!',
-      client_id: clientId
+      client_id: clientId,
+      message: 'Form submitted successfully'
     });
-
   } catch (error) {
-    console.error('Form submission error:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to submit form. Please try again.'
-    }, { status: 500 });
+    console.error('Error submitting form:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to submit form' },
+      { status: 500 }
+    );
   }
 }
