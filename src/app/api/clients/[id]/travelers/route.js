@@ -1,14 +1,26 @@
 import { NextResponse } from 'next/server';
-import { getClientTravelers } from '../../../../lib/supabase-db';
+import { getDatabase } from '../../../../lib/database';
 
 export async function GET(request, { params }) {
   try {
+    const db = getDatabase();
     const { id } = params;
-    const travelers = await getClientTravelers(id);
+
+    const travelers = db.prepare(`
+      SELECT * FROM additional_travelers
+      WHERE client_id = ?
+      ORDER BY traveler_number ASC
+    `).all(id);
+
+    // Parse JSON fields
+    const parsedTravelers = travelers.map(traveler => ({
+      ...traveler,
+      dietary_restrictions: JSON.parse(traveler.dietary_restrictions || '[]')
+    }));
 
     return NextResponse.json({
       success: true,
-      travelers
+      travelers: parsedTravelers
     });
   } catch (error) {
     console.error('Error fetching travelers:', error);

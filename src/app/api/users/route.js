@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getAdminUsers, createAdminUser, deleteAdminUser } from '../../../../lib/supabase-db';
+import { getDatabase } from '../../../lib/database';
 
 export async function GET() {
   try {
-    const users = await getAdminUsers();
+    const db = getDatabase();
+    const users = db.prepare(`
+      SELECT id, username, full_name, role, can_modify, can_delete, email, created_date, last_login
+      FROM users
+      ORDER BY created_date DESC
+    `).all();
 
     return NextResponse.json({
       success: true,
@@ -20,6 +25,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    const db = getDatabase();
     const body = await request.json();
     const { email, full_name, role, can_modify, can_delete } = body;
 
@@ -30,15 +36,15 @@ export async function POST(request) {
       );
     }
 
-    const userData = {
-      email,
-      full_name,
-      role,
-      can_modify: can_modify || false,
-      can_delete: can_delete || false
-    };
+    // Generate username from email
+    const username = email.split('@')[0];
 
-    const user = await createAdminUser(userData);
+    const result = db.prepare(`
+      INSERT INTO users (username, full_name, role, can_modify, can_delete, email)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(username, full_name, role, can_modify || 0, can_delete || 0, email);
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
 
     return NextResponse.json({
       success: true,
@@ -55,6 +61,7 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
+    const db = getDatabase();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
 
@@ -65,7 +72,7 @@ export async function DELETE(request) {
       );
     }
 
-    await deleteAdminUser(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 
     return NextResponse.json({
       success: true,
