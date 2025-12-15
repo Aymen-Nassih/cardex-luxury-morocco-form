@@ -1,23 +1,48 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database';
+import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const db = getDatabase();
-    const users = db.prepare(`
-      SELECT id, username, full_name, role, can_modify, can_delete, email, created_date, last_login
-      FROM users
-      ORDER BY created_date DESC
-    `).all();
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get admin user details to check permissions
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', user.email)
+      .single();
+
+    if (!adminUser || adminUser.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const { data: users, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      users
+      users: users || []
     });
+
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Get users error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch users' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }
@@ -25,35 +50,63 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const db = getDatabase();
-    const body = await request.json();
-    const { email, full_name, role, can_modify, can_delete } = body;
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get admin user details to check permissions
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', user.email)
+      .single();
+
+    if (!adminUser || adminUser.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const { email, full_name, role, can_modify, can_delete } = await request.json();
 
     if (!email || !full_name || !role) {
       return NextResponse.json(
-        { success: false, message: 'Email, full name, and role are required' },
+        { success: false, error: 'Email, full name, and role are required' },
         { status: 400 }
       );
     }
 
-    // Generate username from email
-    const username = email.split('@')[0];
+    // Insert new admin user
+    const { data: newUser, error } = await supabase
+      .from('admin_users')
+      .insert({
+        email,
+        full_name,
+        role,
+        can_modify: can_modify || false,
+        can_delete: can_delete || false
+      })
+      .select()
+      .single();
 
-    const result = db.prepare(`
-      INSERT INTO users (username, full_name, role, can_modify, can_delete, email)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(username, full_name, role, can_modify || 0, can_delete || 0, email);
-
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      user
+      user: newUser
     });
+
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('Create user error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to create user' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }
@@ -61,27 +114,57 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
-    const db = getDatabase();
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get admin user details to check permissions
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', user.email)
+      .single();
+
+    if (!adminUser || adminUser.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, message: 'User ID is required' },
+        { success: false, error: 'User ID is required' },
         { status: 400 }
       );
     }
 
-    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    // Delete admin user
+    const { error } = await supabase
+      .from('admin_users')
+      .delete()
+      .eq('id', userId);
+
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
       message: 'User deleted successfully'
     });
+
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Delete user error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to delete user' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

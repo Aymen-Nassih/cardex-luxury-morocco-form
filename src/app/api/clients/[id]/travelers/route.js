@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../../../lib/database';
+import { getDatabase } from '@/lib/database';
 
 export async function GET(request, { params }) {
   try {
     const db = getDatabase();
-    const { id } = params;
+    const { id: clientId } = await params;
 
     const travelers = db.prepare(`
       SELECT * FROM additional_travelers
       WHERE client_id = ?
       ORDER BY traveler_number ASC
-    `).all(id);
+    `).all(clientId);
 
     // Parse JSON fields
     const parsedTravelers = travelers.map(traveler => ({
@@ -22,10 +22,11 @@ export async function GET(request, { params }) {
       success: true,
       travelers: parsedTravelers
     });
+
   } catch (error) {
-    console.error('Error fetching travelers:', error);
+    console.error('Get travelers error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch travelers' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

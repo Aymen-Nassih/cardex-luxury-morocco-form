@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '../../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import CardexLogo from '../components/CardexLogo';
 
@@ -18,35 +17,18 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Simple local authentication for demo
+      // In production, this should be handled by a secure API
+      if (email === 'a.nassih@experiencemorocco.com' && password === 'Nassih1954@') {
+        // Store login state in localStorage for demo purposes
+        localStorage.setItem('admin_logged_in', 'true');
+        localStorage.setItem('admin_email', email);
 
-      if (error) throw error;
-
-      // Check if user exists in admin_users table
-      const { data: adminUser, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (adminError || !adminUser) {
-        throw new Error('User not authorized for admin access');
+        // Redirect to admin dashboard
+        router.push('/admin');
+      } else {
+        throw new Error('Invalid email or password');
       }
-
-      // Log the login
-      await supabase.from('login_logs').insert({
-        user_id: adminUser.id,
-        email: email,
-        ip_address: 'N/A', // Can be added with server-side API
-        user_agent: navigator.userAgent
-      });
-
-      // Redirect to admin dashboard
-      router.push('/admin');
 
     } catch (error) {
       console.error('Login error:', error);
@@ -95,7 +77,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin@cardex.com"
+                placeholder="a.nassih@experiencemorocco.com"
                 className="
                   w-full px-4 py-3
                   text-gray-900 font-medium
@@ -105,6 +87,7 @@ export default function LoginPage() {
                   focus:outline-none transition-all
                 "
               />
+              <p className="text-xs text-gray-500 mt-1">Use: a.nassih@experiencemorocco.com</p>
             </div>
 
             {/* Password */}
@@ -117,7 +100,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Enter your password"
+                placeholder="Enter any password"
                 className="
                   w-full px-4 py-3
                   text-gray-900 font-medium
@@ -127,6 +110,7 @@ export default function LoginPage() {
                   focus:outline-none transition-all
                 "
               />
+              <p className="text-xs text-gray-500 mt-1">Password: Nassih1954@</p>
             </div>
 
             {/* Login Button */}

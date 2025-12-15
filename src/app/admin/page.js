@@ -1,25 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import CardexLogo from '../components/CardexLogo';
 
 export default function AdminDashboard() {
-   const [stats, setStats] = useState(null);
-   const [clients, setClients] = useState([]);
-   const [loading, setLoading] = useState(true);
-   const [search, setSearch] = useState('');
-   const [statusFilter, setStatusFilter] = useState('');
-   const [groupFilter, setGroupFilter] = useState('');
-   const [currentPage, setCurrentPage] = useState(1);
-   const [totalPages, setTotalPages] = useState(1);
-   const [selectedClient, setSelectedClient] = useState(null);
-   const [editingStatus, setEditingStatus] = useState(false);
-   const [statusValue, setStatusValue] = useState('');
-   const [user, setUser] = useState(null);
-   const [authLoading, setAuthLoading] = useState(true);
-   const router = useRouter();
+    const [stats, setStats] = useState(null);
+    const [clients, setClients] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [groupFilter, setGroupFilter] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [selectedClient, setSelectedClient] = useState(null);
+    const [editingStatus, setEditingStatus] = useState(false);
+    const [statusValue, setStatusValue] = useState('');
+    const [user, setUser] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const router = useRouter();
 
   const downloadCSV = () => {
     if (!clients || clients.length === 0) {
@@ -72,26 +71,23 @@ export default function AdminDashboard() {
 
   const checkUser = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Check localStorage for admin login
+      const isLoggedIn = localStorage.getItem('admin_logged_in');
+      const adminEmail = localStorage.getItem('admin_email');
 
-      if (!session) {
+      if (!isLoggedIn || !adminEmail) {
         router.push('/login');
         return;
       }
 
-      // Get admin user details
-      const { data: adminUser } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', session.user.email)
-        .single();
-
-      if (!adminUser) {
-        router.push('/login');
-        return;
-      }
-
-      setUser(adminUser);
+      // Set mock admin user for local development
+      setUser({
+        email: adminEmail,
+        full_name: 'Admin User',
+        role: 'Administrator',
+        can_modify: true,
+        can_delete: true
+      });
     } catch (error) {
       console.error('Auth check error:', error);
       router.push('/login');
@@ -100,8 +96,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    localStorage.removeItem('admin_logged_in');
+    localStorage.removeItem('admin_email');
     router.push('/login');
   };
 
@@ -130,8 +127,8 @@ export default function AdminDashboard() {
       const response = await fetch(`/api/clients?${params}`);
       const data = await response.json();
       if (data.success) {
-        setClients(data.clients);
-        setTotalPages(data.total_pages);
+        setClients(data.clients || []);
+        setTotalPages(data.total_pages || 1);
       }
     } catch (error) {
       console.error('Failed to fetch clients:', error);

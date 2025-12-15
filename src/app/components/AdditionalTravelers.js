@@ -33,7 +33,7 @@ export default function AdditionalTravelers({ travelers, setTravelers }) {
       <div className="space-y-6">
         {travelers.map((traveler, index) => (
           <div
-            key={`traveler-${traveler.id || index}-${Date.now()}`}
+            key={traveler.id || `traveler-${index}`}
             className="
               bg-gradient-to-br from-blue-50 to-white
               border-2 border-blue-200

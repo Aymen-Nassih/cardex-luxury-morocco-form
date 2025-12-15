@@ -1,46 +1,62 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../../../lib/database';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request, { params }) {
   try {
-    const db = getDatabase();
-    const { id } = params;
-    const body = await request.json();
-    const { admin_email, note } = body;
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!admin_email || !note) {
+    if (!user) {
       return NextResponse.json(
-        { success: false, message: 'Admin email and note are required' },
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const clientId = params.id;
+    const { note } = await request.json();
+
+    if (!note) {
+      return NextResponse.json(
+        { success: false, error: 'Note is required' },
         { status: 400 }
       );
     }
 
-    // Get user ID from email
-    const user = db.prepare('SELECT id FROM users WHERE email = ?').get(admin_email);
-    if (!user) {
+    // Get admin user
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('email', user.email)
+      .single();
+
+    if (!adminUser) {
       return NextResponse.json(
-        { success: false, message: 'Admin user not found' },
+        { success: false, error: 'Admin user not found' },
         { status: 404 }
       );
     }
 
-    const result = db.prepare(`
-      INSERT INTO client_notes (client_id, user_id, note)
-      VALUES (?, ?, ?)
-    `).run(id, user.id, note);
+    // Insert note
+    const { error } = await supabase
+      .from('client_notes')
+      .insert({
+        client_id: clientId,
+        user_id: adminUser.id,
+        note: note
+      });
 
-    const clientNote = db.prepare(`
-      SELECT * FROM client_notes WHERE id = ?
-    `).get(result.lastInsertRowid);
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      note: clientNote
+      message: 'Note added successfully'
     });
+
   } catch (error) {
-    console.error('Error adding note:', error);
+    console.error('Add note error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to add note' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

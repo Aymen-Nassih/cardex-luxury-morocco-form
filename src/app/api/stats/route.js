@@ -1,41 +1,52 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database';
+import { getDatabase } from '@/lib/database';
 
 export async function GET() {
   try {
     const db = getDatabase();
 
-    // Get total clients
-    const totalClients = db.prepare('SELECT COUNT(*) as count FROM clients').get().count;
+    // Total clients
+    const totalClientsResult = db.prepare('SELECT COUNT(*) as count FROM clients').get();
+    const totalClients = totalClientsResult.count;
 
-    // Get status breakdown
-    const statusData = db.prepare(`
-      SELECT status, COUNT(*) as count
-      FROM clients
-      GROUP BY status
-    `).all();
+    // By status
+    const statusResults = db.prepare('SELECT status, COUNT(*) as count FROM clients GROUP BY status').all();
+    const byStatus = {};
+    statusResults.forEach(row => {
+      byStatus[row.status] = row.count;
+    });
 
-    // Get total travelers (main clients + additional travelers)
-    const additionalTravelers = db.prepare('SELECT COUNT(*) as count FROM additional_travelers').get().count;
-    const totalGroupSize = totalClients + additionalTravelers;
+    // By group type
+    const groupResults = db.prepare('SELECT group_type, COUNT(*) as count FROM clients WHERE group_type IS NOT NULL GROUP BY group_type').all();
+    const byGroupType = {};
+    groupResults.forEach(row => {
+      byGroupType[row.group_type] = row.count;
+    });
 
-    const stats = {
-      total_clients: totalClients,
-      total_group_size: totalGroupSize,
-      status_breakdown: statusData.map(item => ({
-        status: item.status,
-        count: item.count
-      }))
-    };
+    // Upcoming arrivals (next 30 days)
+    const today = new Date().toISOString().split('T')[0];
+    const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const upcomingResult = db.prepare(`
+      SELECT COUNT(*) as count FROM clients
+      WHERE arrival_date >= ? AND arrival_date <= ?
+    `).get(today, thirtyDaysLater);
+    const upcomingArrivals = upcomingResult.count;
 
     return NextResponse.json({
       success: true,
-      stats
+      stats: {
+        total_clients: totalClients,
+        by_status: byStatus,
+        by_group_type: byGroupType,
+        upcoming_arrivals: upcomingArrivals
+      }
     });
+
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    console.error('Get stats error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch stats' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

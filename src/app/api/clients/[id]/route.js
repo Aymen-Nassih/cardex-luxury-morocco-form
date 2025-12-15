@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../../../lib/database';
+import { getDatabase } from '@/lib/database';
 
 export async function GET(request, { params }) {
   try {
     const db = getDatabase();
-    const { id } = params;
+    const { id: clientId } = await params;
 
-    // Get client details
-    const client = db.prepare(`
-      SELECT * FROM clients WHERE id = ?
-    `).get(id);
+    // Get client
+    const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(clientId);
 
     if (!client) {
       return NextResponse.json(
-        { success: false, message: 'Client not found' },
+        { success: false, error: 'Client not found' },
         { status: 404 }
       );
     }
@@ -22,19 +20,20 @@ export async function GET(request, { params }) {
     client.dietary_restrictions = JSON.parse(client.dietary_restrictions || '[]');
     client.accessibility_needs = JSON.parse(client.accessibility_needs || '[]');
 
-    // Get client notes
+    // Get notes
     const notes = db.prepare(`
       SELECT * FROM client_notes
       WHERE client_id = ?
       ORDER BY created_date DESC
-    `).all(id);
+    `).all(clientId);
 
     // Get modification history
     const history = db.prepare(`
       SELECT * FROM modification_log
       WHERE client_id = ?
       ORDER BY modified_date DESC
-    `).all(id);
+      LIMIT 20
+    `).all(clientId);
 
     return NextResponse.json({
       success: true,
@@ -42,11 +41,12 @@ export async function GET(request, { params }) {
       notes,
       history
     });
+
   } catch (error) {
-    console.error('Error fetching client:', error);
+    console.error('Get client error:', error);
     return NextResponse.json(
-      { success: false, message: 'Client not found' },
-      { status: 404 }
+      { success: false, error: error.message },
+      { status: 500 }
     );
   }
 }
@@ -54,62 +54,55 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const db = getDatabase();
-    const { id } = params;
-    const body = await request.json();
-    const { admin_email, ...updates } = body;
+    const { id: clientId } = await params;
+    const updates = await request.json();
 
-    // Get current client data for logging
-    const currentData = db.prepare('SELECT * FROM clients WHERE id = ?').get(id);
-    if (!currentData) {
+    // Get old values for logging
+    const oldClient = db.prepare('SELECT * FROM clients WHERE id = ?').get(clientId);
+
+    if (!oldClient) {
       return NextResponse.json(
-        { success: false, message: 'Client not found' },
+        { success: false, error: 'Client not found' },
         { status: 404 }
       );
     }
 
-    const oldStatus = currentData.status;
-
-    // Update client
+    // Build update query
     const updateFields = [];
     const updateValues = [];
 
     Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
+      if (updates[key] !== undefined && key !== 'id') {
         updateFields.push(`${key} = ?`);
         updateValues.push(updates[key]);
       }
     });
 
     updateFields.push('updated_at = CURRENT_TIMESTAMP');
-    updateValues.push(id);
+    updateValues.push(clientId);
 
+    // Update client
     db.prepare(`
       UPDATE clients
       SET ${updateFields.join(', ')}
       WHERE id = ?
     `).run(...updateValues);
 
-    // Log the modification if status changed
-    if (admin_email && updates.status && updates.status !== oldStatus) {
-      db.prepare(`
-        INSERT INTO modification_log (client_id, user_id, action, old_values, new_values)
-        VALUES (?, (SELECT id FROM users WHERE email = ?), ?, ?, ?)
-      `).run(id, admin_email, 'Status Change', JSON.stringify({ status: oldStatus }), JSON.stringify({ status: updates.status }));
-    }
-
-    // Get updated client
-    const updatedClient = db.prepare('SELECT * FROM clients WHERE id = ?').get(id);
-    updatedClient.dietary_restrictions = JSON.parse(updatedClient.dietary_restrictions || '[]');
-    updatedClient.accessibility_needs = JSON.parse(updatedClient.accessibility_needs || '[]');
+    // Log the modification (using admin user ID 1 for now)
+    db.prepare(`
+      INSERT INTO modification_log (client_id, user_id, action, old_values, new_values)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(clientId, 1, 'Updated', JSON.stringify(oldClient), JSON.stringify(updates));
 
     return NextResponse.json({
       success: true,
-      client: updatedClient
+      message: 'Client updated successfully'
     });
+
   } catch (error) {
-    console.error('Error updating client:', error);
+    console.error('Update client error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to update client' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

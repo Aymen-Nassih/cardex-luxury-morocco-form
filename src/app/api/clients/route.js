@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database';
+import { getDatabase } from '@/lib/database';
 
 export async function GET(request) {
   try {
@@ -36,7 +36,7 @@ export async function GET(request) {
 
     // Get paginated results
     const offset = (page - 1) * perPage;
-    const clients = db.prepare(`
+    const clientsResult = db.prepare(`
       SELECT
         id,
         full_name,
@@ -53,6 +53,9 @@ export async function GET(request) {
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
     `).all(...params, perPage, offset);
+
+    // Ensure clients is always an array
+    const clients = Array.isArray(clientsResult) ? clientsResult : [];
 
     return NextResponse.json({
       success: true,

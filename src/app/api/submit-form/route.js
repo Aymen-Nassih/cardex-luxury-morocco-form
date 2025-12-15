@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '../../../../lib/database';
+import { getDatabase } from '@/lib/database';
 
 export async function POST(request) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request) {
       clientData.custom_activities || null,
       clientData.food_preferences || null,
       clientData.additional_inquiries || null,
-      clientData.gdpr_consent || false,
+      clientData.gdpr_consent ? 1 : 0,
       'Pending'
     );
 
