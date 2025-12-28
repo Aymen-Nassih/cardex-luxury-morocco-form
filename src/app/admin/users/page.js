@@ -1,46 +1,71 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../../lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState('');
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     full_name: '',
-    role: 'viewer',
+    role: 'User',
     can_modify: false,
     can_delete: false
   });
+  const router = useRouter();
 
   useEffect(() => {
-    loadUsers();
-    getCurrentUser();
+    checkAuthAndLoadUsers();
   }, []);
 
-  const getCurrentUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const { data } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', session.user.email)
-        .single();
-      setCurrentUser(data);
+  const checkAuthAndLoadUsers = async () => {
+    // Check for JWT token in localStorage
+    const storedToken = localStorage.getItem('admin_token');
+    const userData = localStorage.getItem('admin_user');
+
+    if (!storedToken || !userData) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userData);
+      setCurrentUser(user);
+      setToken(storedToken);
+
+      // Load users
+      await loadUsers(storedToken);
+    } catch (error) {
+      console.error('Auth check error:', error);
+      router.push('/login');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loadUsers = async () => {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .order('created_at', { ascending: false });
+  const loadUsers = async (authToken) => {
+    try {
+      const response = await fetch('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
 
-    if (!error) {
-      setUsers(data);
+      const data = await response.json();
+      if (data.success) {
+        setUsers(data.users);
+      } else {
+        alert('Failed to load users: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      alert('Failed to load users. Please try again.');
     }
   };
 
@@ -48,44 +73,36 @@ export default function UserManagementPage() {
     e.preventDefault();
 
     try {
-      // 1. Create auth user in Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
       });
 
-      if (authError) throw authError;
+      const data = await response.json();
 
-      // 2. Add to admin_users table
-      const { error: dbError } = await supabase
-        .from('admin_users')
-        .insert({
-          email: formData.email,
-          full_name: formData.full_name,
-          role: formData.role,
-          can_modify: formData.can_modify,
-          can_delete: formData.can_delete,
-          created_by: currentUser?.id
+      if (data.success) {
+        alert('User created successfully!');
+        setShowAddModal(false);
+        setFormData({
+          username: '',
+          email: '',
+          password: '',
+          full_name: '',
+          role: 'User',
+          can_modify: false,
+          can_delete: false
         });
-
-      if (dbError) throw dbError;
-
-      // Success
-      alert('User added successfully! They will receive a confirmation email.');
-      setShowAddModal(false);
-      setFormData({
-        email: '',
-        password: '',
-        full_name: '',
-        role: 'viewer',
-        can_modify: false,
-        can_delete: false
-      });
-      loadUsers();
-
+        loadUsers(token);
+      } else {
+        alert('Failed to create user: ' + (data.error || 'Unknown error'));
+      }
     } catch (error) {
-      console.error('Error adding user:', error);
-      alert('Failed to add user: ' + error.message);
+      console.error('Failed to create user:', error);
+      alert('Failed to create user. Please try again.');
     }
   };
 
@@ -95,25 +112,37 @@ export default function UserManagementPage() {
     }
 
     try {
-      // Delete from admin_users (auth user needs to be deleted via admin API)
-      const { error } = await supabase
-        .from('admin_users')
-        .delete()
-        .eq('id', userId);
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      alert('User deleted successfully');
-      loadUsers();
-
+      if (data.success) {
+        alert('User deleted successfully');
+        loadUsers(token);
+      } else {
+        alert('Failed to delete user: ' + (data.error || 'Unknown error'));
+      }
     } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('Failed to delete user: ' + error.message);
+      console.error('Failed to delete user:', error);
+      alert('Failed to delete user. Please try again.');
     }
   };
 
   // Only admins can access this page
-  if (currentUser?.role !== 'admin') {
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="text-xl text-gray-900">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== 'Admin') {
     return (
       <div className="p-8">
         <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg">
@@ -130,16 +159,16 @@ export default function UserManagementPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage admin users and permissions</p>
+          <h1 className="text-3xl font-bold text-green-400">User Management</h1>
+          <p className="text-green-300 mt-1">Manage admin users and permissions</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="
             px-6 py-3
-            bg-blue-600 text-white
+            bg-orange-600 text-white
             rounded-xl font-semibold
-            hover:bg-blue-700
+            hover:bg-orange-700
             shadow-lg hover:shadow-xl
             transition-all
           "
@@ -153,6 +182,7 @@ export default function UserManagementPage() {
         <table className="w-full">
           <thead className="bg-gray-100">
             <tr>
+              <th className="px-6 py-4 text-left text-gray-900 font-semibold">Username</th>
               <th className="px-6 py-4 text-left text-gray-900 font-semibold">Name</th>
               <th className="px-6 py-4 text-left text-gray-900 font-semibold">Email</th>
               <th className="px-6 py-4 text-left text-gray-900 font-semibold">Role</th>
@@ -163,12 +193,13 @@ export default function UserManagementPage() {
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-t border-gray-200 hover:bg-gray-50">
+                <td className="px-6 py-4 text-gray-900 font-medium">{user.username}</td>
                 <td className="px-6 py-4 text-gray-900 font-medium">{user.full_name}</td>
                 <td className="px-6 py-4 text-gray-700">{user.email}</td>
                 <td className="px-6 py-4">
                   <span className={`
                     px-3 py-1 rounded-full text-sm font-semibold
-                    ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}
+                    ${user.role === 'Admin' ? 'bg-purple-100 text-purple-800' : user.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}
                   `}>
                     {user.role}
                   </span>
@@ -210,6 +241,19 @@ export default function UserManagementPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New User</h2>
 
             <form onSubmit={handleAddUser} className="space-y-4">
+              {/* Username */}
+              <div>
+                <label className="block text-gray-800 font-semibold mb-2">Username</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.username}
+                  onChange={(e) => setFormData({...formData, username: e.target.value})}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:border-orange-600 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+                  placeholder="Enter username"
+                />
+              </div>
+
               {/* Full Name */}
               <div>
                 <label className="block text-gray-800 font-semibold mb-2">Full Name</label>
@@ -218,7 +262,8 @@ export default function UserManagementPage() {
                   required
                   value={formData.full_name}
                   onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:border-orange-600 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+                  placeholder="Enter full name"
                 />
               </div>
 
@@ -230,7 +275,8 @@ export default function UserManagementPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:border-orange-600 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+                  placeholder="Enter email address"
                 />
               </div>
 
@@ -243,7 +289,8 @@ export default function UserManagementPage() {
                   minLength="6"
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:border-orange-600 focus:ring-4 focus:ring-orange-100 focus:outline-none"
+                  placeholder="Enter password (min 6 characters)"
                 />
               </div>
 
@@ -253,11 +300,11 @@ export default function UserManagementPage() {
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:border-orange-600 focus:ring-4 focus:ring-orange-100 focus:outline-none"
                 >
-                  <option value="viewer">Viewer</option>
-                  <option value="editor">Editor</option>
-                  <option value="admin">Admin</option>
+                  <option value="User">User</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
 
@@ -268,7 +315,7 @@ export default function UserManagementPage() {
                     type="checkbox"
                     checked={formData.can_modify}
                     onChange={(e) => setFormData({...formData, can_modify: e.target.checked})}
-                    className="w-5 h-5 text-blue-600 rounded"
+                    className="w-5 h-5 text-orange-600 rounded"
                   />
                   <span className="text-gray-800 font-medium">Can Modify Records</span>
                 </label>
@@ -277,7 +324,7 @@ export default function UserManagementPage() {
                     type="checkbox"
                     checked={formData.can_delete}
                     onChange={(e) => setFormData({...formData, can_delete: e.target.checked})}
-                    className="w-5 h-5 text-blue-600 rounded"
+                    className="w-5 h-5 text-orange-600 rounded"
                   />
                   <span className="text-gray-800 font-medium">Can Delete Records</span>
                 </label>
@@ -294,7 +341,7 @@ export default function UserManagementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700"
+                  className="flex-1 px-4 py-3 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700"
                 >
                   Add User
                 </button>

@@ -1,53 +1,66 @@
-import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { NextResponse } from 'next/server'
+import { db } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const db = getDatabase();
+    // Get clients for manual calculation
+    const clients = await db.getClients()
+    
+    // Calculate stats manually - using actual status values: Pending, Confirmed, Cancelled
+    const total_clients = clients.length
+    
+    // Count by status
+    const by_status = {
+      Pending: clients.filter(client => client.status === 'Pending').length,
+      Confirmed: clients.filter(client => client.status === 'Confirmed').length,
+      Cancelled: clients.filter(client => client.status === 'Cancelled').length
+    }
 
-    // Total clients
-    const totalClientsResult = db.prepare('SELECT COUNT(*) as count FROM clients').get();
-    const totalClients = totalClientsResult.count;
+    // Calculate total group size (sum of all travelers)
+    const total_group_size = clients.reduce((sum, client) => {
+      return sum + (parseInt(client.number_of_travelers) || 1)
+    }, 0)
 
-    // By status
-    const statusResults = db.prepare('SELECT status, COUNT(*) as count FROM clients GROUP BY status').all();
-    const byStatus = {};
-    statusResults.forEach(row => {
-      byStatus[row.status] = row.count;
-    });
+    // Group by month
+    const monthlyStats = {}
+    clients.forEach(client => {
+      const month = new Date(client.created_at).toISOString().slice(0, 7) // YYYY-MM
+      if (!monthlyStats[month]) {
+        monthlyStats[month] = { month, count: 0, confirmed: 0 }
+      }
+      monthlyStats[month].count++
+      if (client.status === 'Confirmed') {
+        monthlyStats[month].confirmed++
+      }
+    })
 
-    // By group type
-    const groupResults = db.prepare('SELECT group_type, COUNT(*) as count FROM clients WHERE group_type IS NOT NULL GROUP BY group_type').all();
-    const byGroupType = {};
-    groupResults.forEach(row => {
-      byGroupType[row.group_type] = row.count;
-    });
+    // Get group type distribution
+    const groupTypeStats = {}
+    clients.forEach(client => {
+      const groupType = client.group_type || 'Unknown'
+      if (!groupTypeStats[groupType]) {
+        groupTypeStats[groupType] = 0
+      }
+      groupTypeStats[groupType]++
+    })
 
-    // Upcoming arrivals (next 30 days)
-    const today = new Date().toISOString().split('T')[0];
-    const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const upcomingResult = db.prepare(`
-      SELECT COUNT(*) as count FROM clients
-      WHERE arrival_date >= ? AND arrival_date <= ?
-    `).get(today, thirtyDaysLater);
-    const upcomingArrivals = upcomingResult.count;
+    const stats = {
+      total_clients,
+      by_status,
+      total_group_size,
+      monthlyStats: Object.values(monthlyStats),
+      groupTypeStats
+    }
 
     return NextResponse.json({
       success: true,
-      stats: {
-        total_clients: totalClients,
-        by_status: byStatus,
-        by_group_type: byGroupType,
-        upcoming_arrivals: upcomingArrivals
-      }
-    });
-
+      stats: stats
+    })
   } catch (error) {
-    console.error('Get stats error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error('❌ GET stats error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error.message
+    }, { status: 500 })
   }
 }

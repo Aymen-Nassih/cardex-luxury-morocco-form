@@ -5,33 +5,33 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-moroccan-pattern">
       {/* Premium Header Design */}
-      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="bg-gradient-to-br from-[#B5541B] via-[#9B4722] to-[#7a3819] text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
           <div className="text-center">
             {/* Logo */}
-            <div className="inline-block bg-white rounded-2xl p-6 shadow-2xl mb-8">
+            <div className="inline-block bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl sm:shadow-2xl mb-6 sm:mb-8">
               <CardexLogo size="large" />
             </div>
 
             {/* Title */}
-            <h1 className="text-5xl sm:text-6xl font-bold mb-4 text-white drop-shadow-lg">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 text-white drop-shadow-lg px-2">
               Luxury Morocco Experience
             </h1>
 
             {/* Subtitle */}
-            <p className="text-xl sm:text-2xl text-blue-100 mb-3 max-w-3xl mx-auto">
+            <p className="text-base sm:text-xl md:text-2xl text-orange-100 mb-2 sm:mb-3 max-w-3xl mx-auto px-2">
               Begin your journey to discover the magic of Morocco
             </p>
 
             {/* Description */}
-            <p className="text-lg text-blue-200 max-w-2xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg text-orange-200 max-w-2xl mx-auto px-2">
               From ancient medinas to golden dunes, create unforgettable memories
             </p>
           </div>
         </div>
 
         {/* Wave separator */}
-        <div className="relative h-16">
+        <div className="relative h-12 sm:h-16">
           <svg
             className="absolute bottom-0 w-full h-16"
             xmlns="http://www.w3.org/2000/svg"
@@ -48,9 +48,9 @@ export default function Home() {
       </div>
 
       {/* Decorative Wave Separator */}
-      <div className="relative h-16 bg-ocean-gradient">
+      <div className="relative h-12 sm:h-16 bg-ocean-gradient">
         <svg
-          className="absolute bottom-0 w-full h-16"
+          className="absolute bottom-0 w-full h-12 sm:h-16"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 1440 320"
           preserveAspectRatio="none"
@@ -63,24 +63,24 @@ export default function Home() {
       </div>
 
       {/* Form Section */}
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="max-w-5xl mx-auto">
           {/* Section Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-morocco-orange-100 px-6 py-2 rounded-full mb-4">
-              <span className="text-2xl">✈️</span>
-              <span className="text-morocco-orange-700 font-semibold">Plan Your Journey</span>
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-morocco-orange-100 px-4 sm:px-6 py-1.5 sm:py-2 rounded-full mb-3 sm:mb-4">
+              <span className="text-xl sm:text-2xl">✈️</span>
+              <span className="text-morocco-orange-700 font-semibold text-sm sm:text-base">Plan Your Journey</span>
             </div>
-            <h2 className="text-3xl font-bold text-morocco-blue-700 mb-3">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#B5541B] mb-2 sm:mb-3 px-2">
               Tell Us About Your Travel Dreams
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="text-sm sm:text-base md:text-lg text-gray-600 px-2">
               Fill out the form below and let us create your perfect Moroccan adventure
             </p>
           </div>
 
           {/* Form Card */}
-          <div className="bg-white rounded-2xl shadow-travel p-8 md:p-12 border-t-4 border-morocco-orange-500">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-travel p-4 sm:p-6 md:p-8 lg:p-12 border-t-4 border-morocco-orange-500">
             <ClientForm />
           </div>
 
@@ -95,10 +95,10 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-morocco-blue-800 text-white py-8 mt-20">
-        <div className="container mx-auto px-4 text-center">
+      <footer className="bg-[#5a2911] text-white py-6 sm:py-8 mt-12 sm:mt-16 md:mt-20">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
           <CardexLogo size="small" />
-          <p className="mt-4 text-blue-200">
+          <p className="mt-3 sm:mt-4 text-orange-200 text-sm sm:text-base px-2">
             Creating unforgettable Moroccan experiences since 2009
           </p>
         </div>

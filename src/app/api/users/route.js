@@ -1,171 +1,119 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { db } from '@/lib/supabase'
 
-export async function GET() {
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+
+// Helper function to verify admin token
+async function verifyAdmin(request) {
   try {
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null
     }
 
-    // Get admin user details to check permissions
-    const { data: adminUser } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', user.email)
-      .single();
+    const token = authHeader.substring(7)
+    const decoded = jwt.verify(token, JWT_SECRET)
 
-    if (!adminUser || adminUser.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+    // Get user from database
+    const user = await db.getUserById(decoded.id)
+    if (!user || user.role !== 'Admin') {
+      return null
     }
 
-    const { data: users, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .order('created_at', { ascending: false });
+    return user
+  } catch (error) {
+    return null
+  }
+}
 
-    if (error) throw error;
+export async function GET(request) {
+  try {
+    // Verify admin access
+    const admin = await verifyAdmin(request)
+    if (!admin) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized - Admin access required'
+      }, { status: 401 })
+    }
+
+    const users = await db.getAllUsers()
 
     return NextResponse.json({
       success: true,
-      users: users || []
-    });
-
+      users: users
+    })
   } catch (error) {
-    console.error('Get users error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error('❌ GET users error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error.message
+    }, { status: 500 })
   }
 }
 
 export async function POST(request) {
   try {
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Verify admin access
+    const admin = await verifyAdmin(request)
+    if (!admin) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized - Admin access required'
+      }, { status: 401 })
     }
 
-    // Get admin user details to check permissions
-    const { data: adminUser } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', user.email)
-      .single();
+    const { username, email, password, full_name, role, can_modify, can_delete } = await request.json()
 
-    if (!adminUser || adminUser.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+    // Validate required fields
+    if (!username || !email || !password || !full_name) {
+      return NextResponse.json({
+        success: false,
+        error: 'Missing required fields'
+      }, { status: 400 })
     }
 
-    const { email, full_name, role, can_modify, can_delete } = await request.json();
+    // Hash password
+    const saltRounds = 10
+    const password_hash = await bcrypt.hash(password, saltRounds)
 
-    if (!email || !full_name || !role) {
-      return NextResponse.json(
-        { success: false, error: 'Email, full name, and role are required' },
-        { status: 400 }
-      );
+    // Create user
+    const userData = {
+      username,
+      email,
+      full_name,
+      password_hash,
+      role: role || 'User',
+      can_modify: can_modify || false,
+      can_delete: can_delete || false
     }
 
-    // Insert new admin user
-    const { data: newUser, error } = await supabase
-      .from('admin_users')
-      .insert({
-        email,
-        full_name,
-        role,
-        can_modify: can_modify || false,
-        can_delete: can_delete || false
-      })
-      .select()
-      .single();
+    const user = await db.createUser(userData)
 
-    if (error) throw error;
+    // Return user without password hash
+    const { password_hash: _, ...userWithoutPassword } = user
 
     return NextResponse.json({
       success: true,
-      user: newUser
-    });
-
+      user: userWithoutPassword,
+      message: 'User created successfully'
+    })
   } catch (error) {
-    console.error('Create user error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
-  }
-}
+    console.error('❌ POST users error:', error)
 
-export async function DELETE(request) {
-  try {
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Handle duplicate key errors
+    if (error.code === '23505') {
+      return NextResponse.json({
+        success: false,
+        error: 'Username or email already exists'
+      }, { status: 409 })
     }
-
-    // Get admin user details to check permissions
-    const { data: adminUser } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', user.email)
-      .single();
-
-    if (!adminUser || adminUser.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('id');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Delete admin user
-    const { error } = await supabase
-      .from('admin_users')
-      .delete()
-      .eq('id', userId);
-
-    if (error) throw error;
 
     return NextResponse.json({
-      success: true,
-      message: 'User deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Delete user error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+      success: false,
+      error: error.message
+    }, { status: 500 })
   }
 }

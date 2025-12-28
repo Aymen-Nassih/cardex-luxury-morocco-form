@@ -1,33 +1,43 @@
-import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { NextResponse } from 'next/server'
+import { db } from '@/lib/supabase'
 
 export async function GET(request, { params }) {
   try {
-    const db = getDatabase();
-    const { id: clientId } = await params;
-
-    const travelers = db.prepare(`
-      SELECT * FROM additional_travelers
-      WHERE client_id = ?
-      ORDER BY traveler_number ASC
-    `).all(clientId);
-
-    // Parse JSON fields
-    const parsedTravelers = travelers.map(traveler => ({
-      ...traveler,
-      dietary_restrictions: JSON.parse(traveler.dietary_restrictions || '[]')
-    }));
-
+    const { id: clientId } = await params
+    const travelers = await db.getTravelersByClientId(clientId)
+    
     return NextResponse.json({
       success: true,
-      travelers: parsedTravelers
-    });
-
+      travelers: travelers
+    })
   } catch (error) {
-    console.error('Get travelers error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error('❌ GET travelers error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error.message
+    }, { status: 500 })
+  }
+}
+
+export async function POST(request, { params }) {
+  try {
+    const { id: clientId } = await params
+    const travelerData = await request.json()
+    
+    const newTraveler = await db.addTraveler({
+      ...travelerData,
+      client_id: clientId
+    })
+    
+    return NextResponse.json({
+      success: true,
+      traveler: newTraveler
+    })
+  } catch (error) {
+    console.error('❌ POST traveler error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error.message
+    }, { status: 500 })
   }
 }

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Sans+Arabic:wght@400;700&family=Playfair+Display:wght@700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -10,6 +11,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-amiri: 'Amiri', serif;
+  --font-noto-arabic: 'Noto Sans Arabic', sans-serif;
+  --font-playfair: 'Playfair Display', serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +26,66 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Noto Sans Arabic', Arial, Helvetica, sans-serif;
+}
+
+.font-amiri {
+  font-family: 'Amiri', serif;
+}
+
+.font-playfair {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-noto-arabic {
+  font-family: 'Noto Sans Arabic', sans-serif;
+}
+
+/* Admin Panel Font Visibility */
+.admin-panel {
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.admin-panel .text-gray-600 {
+  color: #374151 !important; /* gray-700 for better visibility */
+}
+
+.admin-panel .text-gray-500 {
+  color: #6b7280 !important; /* gray-500 for secondary text */
+}
+
+.admin-panel .text-gray-400 {
+  color: #9ca3af !important; /* gray-400 for disabled text */
+}
+
+.admin-panel h1, .admin-panel h2, .admin-panel h3, .admin-panel h4, .admin-panel h5, .admin-panel h6 {
+  color: #111827 !important; /* gray-900 for headings */
+  font-weight: 600;
+}
+
+.admin-panel .font-medium {
+  font-weight: 500;
+}
+
+.admin-panel .font-semibold {
+  font-weight: 600;
+}
+
+.admin-panel .font-bold {
+  font-weight: 700;
+}
+
+/* Ensure good contrast for all text elements */
+.admin-panel p, .admin-panel span, .admin-panel div {
+  color: #374151; /* gray-700 default */
+}
+
+.admin-panel .text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.admin-panel .text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import CardexLogo from '../components/CardexLogo';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,17 +17,29 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Simple local authentication for demo
-      // In production, this should be handled by a secure API
-      if (email === 'a.nassih@experiencemorocco.com' && password === 'Nassih1954@') {
-        // Store login state in localStorage for demo purposes
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store JWT token and user data in localStorage
+        localStorage.setItem('admin_token', data.token);
+        localStorage.setItem('admin_user', JSON.stringify(data.user));
+
+        // Also set the old localStorage flags for backward compatibility
         localStorage.setItem('admin_logged_in', 'true');
-        localStorage.setItem('admin_email', email);
+        localStorage.setItem('admin_email', data.user.email);
 
         // Redirect to admin dashboard
         router.push('/admin');
       } else {
-        throw new Error('Invalid email or password');
+        throw new Error(data.error || 'Login failed');
       }
 
     } catch (error) {
@@ -39,19 +51,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#B5541B] via-[#9B4722] to-[#7a3819] flex items-center justify-center px-4 py-8 sm:py-12">
       <div className="w-full max-w-md">
         {/* Logo Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-2xl mb-6">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl sm:shadow-2xl mb-4 sm:mb-6">
           <CardexLogo size="medium" />
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl p-6 sm:p-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 text-center">
             Admin Login
           </h1>
-          <p className="text-gray-600 text-center mb-8">
+          <p className="text-sm sm:text-base text-[#B5541B] text-center mb-6 sm:mb-8 font-medium">
             Access CARDEX Management System
           </p>
 
@@ -66,33 +78,33 @@ export default function LoginPage() {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email */}
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-6">
+            {/* Username */}
             <div>
-              <label className="block text-gray-800 font-semibold mb-2">
-                Email Address
+              <label className="block text-gray-800 font-semibold mb-2 text-sm sm:text-base">
+                Username
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
-                placeholder="a.nassih@experiencemorocco.com"
+                placeholder="admin"
                 className="
-                  w-full px-4 py-3
-                  text-gray-900 font-medium
+                  w-full px-3 sm:px-4 py-2.5 sm:py-3
+                  text-sm sm:text-base text-gray-900 font-medium
                   bg-white border-2 border-gray-300 rounded-xl
                   placeholder:text-gray-400
-                  focus:border-blue-600 focus:ring-4 focus:ring-blue-100
+                  focus:border-[#B5541B] focus:ring-2 sm:focus:ring-4 focus:ring-orange-100
                   focus:outline-none transition-all
                 "
               />
-              <p className="text-xs text-gray-500 mt-1">Use: a.nassih@experiencemorocco.com</p>
+              <p className="text-xs text-gray-500 mt-1">Default admin username: admin</p>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-gray-800 font-semibold mb-2">
+              <label className="block text-gray-800 font-semibold mb-2 text-sm sm:text-base">
                 Password
               </label>
               <input
@@ -100,17 +112,17 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Enter any password"
+                placeholder="Enter password"
                 className="
-                  w-full px-4 py-3
-                  text-gray-900 font-medium
+                  w-full px-3 sm:px-4 py-2.5 sm:py-3
+                  text-sm sm:text-base text-gray-900 font-medium
                   bg-white border-2 border-gray-300 rounded-xl
                   placeholder:text-gray-400
-                  focus:border-blue-600 focus:ring-4 focus:ring-blue-100
+                  focus:border-[#B5541B] focus:ring-2 sm:focus:ring-4 focus:ring-orange-100
                   focus:outline-none transition-all
                 "
               />
-              <p className="text-xs text-gray-500 mt-1">Password: Nassih1954@</p>
+              <p className="text-xs text-gray-500 mt-1">Default password: admin123</p>
             </div>
 
             {/* Login Button */}
@@ -118,12 +130,12 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="
-                w-full px-6 py-4
-                bg-gradient-to-r from-blue-600 to-blue-700
-                text-white text-lg font-bold rounded-xl
+                w-full px-4 sm:px-6 py-3 sm:py-4
+                bg-gradient-to-r from-[#B5541B] to-[#9B4722]
+                text-white text-base sm:text-lg font-bold rounded-xl
                 shadow-lg hover:shadow-xl
-                hover:from-blue-700 hover:to-blue-800
-                focus:outline-none focus:ring-4 focus:ring-blue-300
+                hover:from-[#9B4722] hover:to-[#7a3819]
+                focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-orange-300
                 disabled:opacity-50 disabled:cursor-not-allowed
                 transform hover:scale-[1.02] active:scale-[0.98]
                 transition-all duration-200
@@ -158,7 +170,7 @@ export default function LoginPage() {
         <div className="text-center mt-6">
           <a
             href="/"
-            className="text-white hover:text-blue-200 font-medium transition-colors"
+            className="text-white hover:text-orange-200 font-medium transition-colors"
           >
             ← Back to Home
           </a>
