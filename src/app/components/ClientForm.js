@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import AdditionalTravelers from './AdditionalTravelers';
 import MultiSelect from './MultiSelect';
+import FileUpload from './FileUpload';
 
 export default function ClientForm() {
   const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ export default function ClientForm() {
     custom_activities: '',
     food_preferences: '',
     additional_inquiries: '',
+    passport_file: null,
     gdpr_consent: false
   });
 
@@ -76,7 +78,8 @@ export default function ClientForm() {
           departure_date: '',
           flight_number: '',
           arrival_time: '',
-          city_of_arrival: ''
+          city_of_arrival: '',
+          passport_file: null
         }));
         setAdditionalTravelers(prev => [...prev, ...newTravelers]);
         setTravelerIdCounter(prev => prev + (additionalCount - currentCount));
@@ -120,51 +123,131 @@ export default function ClientForm() {
     setSubmitMessage('');
 
     try {
-      const submitData = {
-        ...formData,
-        additional_travelers: additionalTravelers
-      };
+      // Check if we have any files to upload
+      const hasFiles = formData.passport_file || additionalTravelers.some(t => t.passport_file);
 
-      const response = await fetch('/api/submit-form', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      });
+      if (hasFiles) {
+        // Use FormData for file uploads
+        const formDataToSend = new FormData();
 
-      const result = await response.json();
-
-      if (result.success) {
-        setSubmitMessage('Form submitted successfully!');
-        // Reset form
-        setFormData({
-          full_name: '',
-          email: '',
-          phone: '',
-          age: '',
-          number_of_travelers: 1,
-          group_type: 'Individual',
-          occasion_description: '',
-          arrival_date: '',
-          departure_date: '',
-          flight_number: '',
-          arrival_time: '',
-          city_of_arrival: '',
-          dietary_restrictions: [],
-          dietary_restrictions_other: '',
-          accessibility_needs: [],
-          accessibility_needs_other: '',
-          preferred_language: '',
-          custom_activities: '',
-          food_preferences: '',
-          additional_inquiries: '',
-          gdpr_consent: false
+        // Add basic form data
+        Object.keys(formData).forEach(key => {
+          if (key === 'passport_file' && formData[key]) {
+            // Handle file separately
+            if (formData[key] && formData[key].file) {
+              formDataToSend.append('passport_file', formData[key].file);
+            }
+          } else if (key === 'dietary_restrictions' || key === 'accessibility_needs') {
+            // Handle arrays
+            formDataToSend.append(key, JSON.stringify(formData[key]));
+          } else {
+            // Handle regular fields
+            formDataToSend.append(key, formData[key]);
+          }
         });
-        setAdditionalTravelers([]);
-        setTravelerIdCounter(0);
+
+        // Add additional travelers
+        formDataToSend.append('additional_travelers', JSON.stringify(additionalTravelers.map(traveler => {
+          // Remove file objects from traveler data, they'll be handled separately
+          const { passport_file, ...travelerData } = traveler;
+          return travelerData;
+        })));
+
+        // Add traveler files
+        additionalTravelers.forEach((traveler, index) => {
+          if (traveler.passport_file && traveler.passport_file.file) {
+            formDataToSend.append(`traveler_${traveler.id}_file`, traveler.passport_file.file);
+          }
+        });
+
+        const response = await fetch('/api/submit-form', {
+          method: 'POST',
+          body: formDataToSend,
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setSubmitMessage('Form submitted successfully!');
+          // Reset form
+          setFormData({
+            full_name: '',
+            email: '',
+            phone: '',
+            age: '',
+            number_of_travelers: 1,
+            group_type: 'Individual',
+            occasion_description: '',
+            arrival_date: '',
+            departure_date: '',
+            flight_number: '',
+            arrival_time: '',
+            city_of_arrival: '',
+            dietary_restrictions: [],
+            dietary_restrictions_other: '',
+            accessibility_needs: [],
+            accessibility_needs_other: '',
+            preferred_language: '',
+            custom_activities: '',
+            food_preferences: '',
+            additional_inquiries: '',
+            passport_file: null,
+            gdpr_consent: false
+          });
+          setAdditionalTravelers([]);
+          setTravelerIdCounter(0);
+        } else {
+          setSubmitMessage(result.message || 'Submission failed');
+        }
       } else {
-        setSubmitMessage(result.message || 'Submission failed');
+        // No files, use JSON as before
+        const submitData = {
+          ...formData,
+          additional_travelers: additionalTravelers
+        };
+
+        const response = await fetch('/api/submit-form', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(submitData),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          setSubmitMessage('Form submitted successfully!');
+          // Reset form
+          setFormData({
+            full_name: '',
+            email: '',
+            phone: '',
+            age: '',
+            number_of_travelers: 1,
+            group_type: 'Individual',
+            occasion_description: '',
+            arrival_date: '',
+            departure_date: '',
+            flight_number: '',
+            arrival_time: '',
+            city_of_arrival: '',
+            dietary_restrictions: [],
+            dietary_restrictions_other: '',
+            accessibility_needs: [],
+            accessibility_needs_other: '',
+            preferred_language: '',
+            custom_activities: '',
+            food_preferences: '',
+            additional_inquiries: '',
+            passport_file: null,
+            gdpr_consent: false
+          });
+          setAdditionalTravelers([]);
+          setTravelerIdCounter(0);
+        } else {
+          setSubmitMessage(result.message || 'Submission failed');
+        }
       }
     } catch (error) {
       setSubmitMessage('Network error. Please try again.');
@@ -867,6 +950,81 @@ export default function ClientForm() {
           travelers={additionalTravelers}
           setTravelers={setAdditionalTravelers}
         />
+
+        {/* Passport Documents */}
+        <div className="mb-10 sm:mb-12">
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+              <span className="text-3xl sm:text-4xl">📘</span>
+              Passport Documents
+            </h2>
+            <p className="text-gray-600 text-base sm:text-lg">Upload clear photos or scans of your passport for travel arrangements</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Main Client Passport */}
+            <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">👤</span>
+                Main Traveler Passport
+              </h3>
+              <FileUpload
+                label="Upload Your Passport"
+                accept="image/*,.pdf"
+                maxSize={10 * 1024 * 1024} // 10MB
+                onFileSelect={(file) => setFormData(prev => ({ ...prev, passport_file: file }))}
+                currentFile={formData.passport_file}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Additional Travelers Passports */}
+            {additionalTravelers.length > 0 && (
+              <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="text-xl">👥</span>
+                  Additional Travelers' Passports
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Please upload passport documents for each additional traveler.
+                </p>
+                <div className="space-y-4">
+                  {additionalTravelers.map((traveler, index) => (
+                    <div key={traveler.id} className="bg-white border border-orange-300 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Traveler {index + 2}: {traveler.name || `Traveler ${index + 2}`}
+                      </h4>
+                      <FileUpload
+                        label={`Passport for ${traveler.name || `Traveler ${index + 2}`}`}
+                        accept="image/*,.pdf"
+                        maxSize={10 * 1024 * 1024} // 10MB
+                        onFileSelect={(file) => {
+                          const updatedTravelers = [...additionalTravelers];
+                          updatedTravelers[index] = { ...updatedTravelers[index], passport_file: file };
+                          setAdditionalTravelers(updatedTravelers);
+                        }}
+                        currentFile={traveler.passport_file}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <span className="text-blue-600 text-lg">🔒</span>
+              <div>
+                <h4 className="font-semibold text-blue-900 text-sm mb-1">Secure Document Handling</h4>
+                <p className="text-blue-800 text-xs leading-relaxed">
+                  Your passport documents are encrypted and securely stored. They are only accessible by authorized travel staff and are used solely for travel arrangements and visa processing when required.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* GDPR Consent */}
         <div className="bg-orange-50 p-5 sm:p-6 rounded-xl border-2 border-orange-100">

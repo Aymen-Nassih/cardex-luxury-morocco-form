@@ -38,6 +38,22 @@ export const db = {
     return data
   },
 
+  async updateClientPassport(clientId, passportData) {
+    const { data, error } = await supabase
+      .from('clients')
+      .update({
+        passport_file_url: passportData.fileUrl,
+        passport_filename: passportData.filename,
+        passport_uploaded_at: new Date().toISOString()
+      })
+      .eq('id', clientId)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
   async getClients() {
     const { data, error } = await supabase
       .from('clients')
@@ -99,6 +115,22 @@ export const db = {
       .from('additional_travelers')
       .update(updates)
       .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async updateTravelerPassport(travelerId, passportData) {
+    const { data, error } = await supabase
+      .from('additional_travelers')
+      .update({
+        passport_file_url: passportData.fileUrl,
+        passport_filename: passportData.filename,
+        passport_uploaded_at: new Date().toISOString()
+      })
+      .eq('id', travelerId)
       .select()
       .single()
     

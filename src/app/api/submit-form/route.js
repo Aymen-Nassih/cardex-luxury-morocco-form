@@ -3,7 +3,75 @@ import { db } from '@/lib/supabase'
 
 export async function POST(request) {
   try {
-    const formData = await request.json()
+    let formData;
+    let files = {};
+
+    // Check if request has FormData (files) or JSON
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData (with files)
+      const formDataObj = await request.formData();
+
+      // Extract files
+      const passportFile = formDataObj.get('passport_file');
+      if (passportFile) {
+        files.passport_file = {
+          file: passportFile,
+          name: passportFile.name,
+          size: passportFile.size,
+          type: passportFile.type,
+          uploadedAt: new Date().toISOString()
+        };
+      }
+
+      // Extract traveler files
+      const travelerFiles = {};
+      for (const [key, value] of formDataObj.entries()) {
+        if (key.startsWith('traveler_') && key.endsWith('_file')) {
+          const travelerId = key.replace('traveler_', '').replace('_file', '');
+          travelerFiles[travelerId] = {
+            file: value,
+            name: value.name,
+            size: value.size,
+            type: value.type,
+            uploadedAt: new Date().toISOString()
+          };
+        }
+      }
+
+      // Parse JSON fields
+      formData = {};
+      for (const [key, value] of formDataObj.entries()) {
+        if (key === 'additional_travelers') {
+          formData[key] = JSON.parse(value);
+        } else if (key === 'dietary_restrictions' || key === 'accessibility_needs') {
+          formData[key] = JSON.parse(value);
+        } else if (!key.includes('file')) {
+          formData[key] = value;
+        }
+      }
+
+      // Add files to formData
+      if (files.passport_file) {
+        formData.passport_file = files.passport_file;
+      }
+
+      // Add traveler files to additional_travelers
+      if (formData.additional_travelers) {
+        formData.additional_travelers = formData.additional_travelers.map(traveler => {
+          const fileKey = traveler.id;
+          if (travelerFiles[fileKey]) {
+            return { ...traveler, passport_file: travelerFiles[fileKey] };
+          }
+          return traveler;
+        });
+      }
+
+    } else {
+      // Handle JSON (no files)
+      formData = await request.json();
+    }
 
     console.log('📝 Form submission received:', formData)
 
@@ -25,7 +93,7 @@ export async function POST(request) {
       )
     }
 
-    // Create client record
+    // Create client record first (without passport data)
     const clientData = {
       full_name: formData.full_name,
       email: formData.email,
@@ -51,6 +119,40 @@ export async function POST(request) {
 
     const client = await db.createClient(clientData)
     console.log('✅ Client created:', client.id)
+
+    // Upload client passport file if provided
+    if (formData.passport_file && formData.passport_file.file) {
+      try {
+        console.log('📁 Uploading client passport file...');
+        console.log('File details:', {
+          name: formData.passport_file.name,
+          size: formData.passport_file.size,
+          type: formData.passport_file.type
+        });
+
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', formData.passport_file.file)
+        uploadFormData.append('fileType', 'client')
+        uploadFormData.append('clientId', client.id.toString())
+
+        console.log('Upload FormData created for client passport');
+
+        const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/upload`, {
+          method: 'POST',
+          body: uploadFormData
+        })
+
+        const uploadResult = await uploadResponse.json()
+        if (uploadResult.success) {
+          console.log('✅ Client passport uploaded:', uploadResult.fileName)
+        } else {
+          console.log('❌ Client passport upload failed:', uploadResult.error)
+        }
+      } catch (error) {
+        console.log('❌ Client passport upload error:', error.message)
+        console.log('Error details:', error)
+      }
+    }
 
     // Add additional travelers if any
     const travelers = formData.additional_travelers || []
@@ -86,6 +188,31 @@ export async function POST(request) {
 
         const newTraveler = await db.addTraveler(travelerData)
         console.log('✅ Additional traveler added:', newTraveler.id)
+
+        // Upload traveler passport file if provided
+        if (traveler.passport_file && traveler.passport_file.file) {
+          try {
+            const uploadFormData = new FormData()
+            uploadFormData.append('file', traveler.passport_file.file)
+            uploadFormData.append('fileType', 'traveler')
+            uploadFormData.append('clientId', client.id.toString())
+            uploadFormData.append('travelerId', newTraveler.id.toString())
+
+            const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/upload`, {
+              method: 'POST',
+              body: uploadFormData
+            })
+
+            const uploadResult = await uploadResponse.json()
+            if (uploadResult.success) {
+              console.log('✅ Traveler passport uploaded:', uploadResult.fileName)
+            } else {
+              console.log('❌ Traveler passport upload failed:', uploadResult.error)
+            }
+          } catch (error) {
+            console.log('❌ Traveler passport upload error:', error.message)
+          }
+        }
       }
     }
 

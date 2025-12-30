@@ -15,7 +15,7 @@ export default function Home() {
 
             {/* Title */}
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 text-white drop-shadow-lg px-2">
-              Luxury Morocco Experience
+              Experience Morocco Wonders
             </h1>
 
             {/* Subtitle */}

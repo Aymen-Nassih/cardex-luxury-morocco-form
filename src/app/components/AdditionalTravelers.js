@@ -1,5 +1,7 @@
 'use client';
 
+import FileUpload from './FileUpload';
+
 export default function AdditionalTravelers({ travelers, setTravelers }) {
   const handleTravelerChange = (index, field, value) => {
     const updatedTravelers = [...travelers];
@@ -492,6 +494,23 @@ export default function AdditionalTravelers({ travelers, setTravelers }) {
                 "
                 placeholder="Any special requirements, preferences, or notes for this traveler..."
               />
+            </div>
+
+            {/* Passport Upload */}
+            <div className="mt-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-blue-600 text-lg">📘</span>
+                  <h4 className="font-semibold text-blue-900">Passport Document</h4>
+                </div>
+                <FileUpload
+                  label={`Passport for ${traveler.name || `Traveler ${index + 2}`}`}
+                  accept="image/*,.pdf"
+                  maxSize={10 * 1024 * 1024} // 10MB
+                  onFileSelect={(file) => handleTravelerChange(index, 'passport_file', file)}
+                  currentFile={traveler.passport_file}
+                />
+              </div>
             </div>
           </div>
         ))}

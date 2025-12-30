@@ -894,6 +894,110 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Passport Documents */}
+                <div className="border-t pt-6 border-gray-200">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                    <span className="text-xl">📄</span>
+                    Passport Documents
+                  </h3>
+
+                  {(selectedClient.passport_file_url || (selectedClient.travelers && selectedClient.travelers.some(t => t.passport_file_url))) ? (
+                    <div className="space-y-4">
+                      {/* Main Client Passport */}
+                      {selectedClient.passport_file_url && (
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">🛂</span>
+                              <div>
+                                <p className="font-semibold text-gray-900">Main Traveler: {selectedClient.full_name}</p>
+                                <p className="text-sm text-gray-600">
+                                  {selectedClient.passport_filename || 'Passport Document'}
+                                  {selectedClient.passport_uploaded_at && (
+                                    <span className="ml-2 text-xs">
+                                      (Uploaded: {new Date(selectedClient.passport_uploaded_at).toLocaleDateString()})
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <a
+                                href={selectedClient.passport_file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+                              >
+                                <span>👁️</span>
+                                View
+                              </a>
+                              <a
+                                href={selectedClient.passport_file_url}
+                                download={selectedClient.passport_filename || 'passport-document'}
+                                className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center gap-2"
+                              >
+                                <span>📥</span>
+                                Download
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Travelers' Passports */}
+                      {selectedClient.travelers && selectedClient.travelers
+                        .filter(traveler => traveler.passport_file_url)
+                        .map((traveler, index) => (
+                          <div key={traveler.id} className="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">🛂</span>
+                                <div>
+                                  <p className="font-semibold text-gray-900">Traveler {index + 2}: {traveler.name}</p>
+                                  <p className="text-sm text-gray-600">
+                                    {traveler.passport_filename || 'Passport Document'}
+                                    {traveler.passport_uploaded_at && (
+                                      <span className="ml-2 text-xs">
+                                        (Uploaded: {new Date(traveler.passport_uploaded_at).toLocaleDateString()})
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <a
+                                  href={traveler.passport_file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                >
+                                  <span>👁️</span>
+                                  View
+                                </a>
+                                <a
+                                  href={traveler.passport_file_url}
+                                  download={traveler.passport_filename || 'passport-document'}
+                                  className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center gap-2"
+                                >
+                                  <span>📥</span>
+                                  Download
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 text-center">
+                      <div className="text-4xl mb-3">📄</div>
+                      <h4 className="font-semibold text-gray-900 mb-2">No Documents Uploaded</h4>
+                      <p className="text-gray-600 text-sm">
+                        Passport documents will appear here once the client submits their form with file uploads.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Travel Details */}
                 <div className="border-t pt-6 border-gray-200">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900">Travel Details</h3>
@@ -1067,63 +1171,60 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          {/* Travel Information - Only show if different travel */}
-                          {traveler.has_different_travel && (
-                            <div className="mb-4">
-                              <span className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                <span className="text-lg">✈️</span>
-                                Travel Information (Different Flight)
-                              </span>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {traveler.arrival_date && (
-                                  <div>
-                                    <span className="block text-xs font-medium text-gray-600 mb-1">Arrival Date</span>
-                                    <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">{traveler.arrival_date}</span>
-                                  </div>
-                                )}
-                                {traveler.departure_date && (
-                                  <div>
-                                    <span className="block text-xs font-medium text-gray-600 mb-1">Departure Date</span>
-                                    <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">{traveler.departure_date}</span>
-                                  </div>
-                                )}
-                                {traveler.flight_number && (
-                                  <div>
-                                    <span className="block text-xs font-medium text-gray-600 mb-1">Flight Number</span>
-                                    <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">{traveler.flight_number}</span>
-                                  </div>
-                                )}
-                                {traveler.arrival_time && (
-                                  <div>
-                                    <span className="block text-xs font-medium text-gray-600 mb-1">Arrival Time</span>
-                                    <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">{traveler.arrival_time}</span>
-                                  </div>
-                                )}
-                                {traveler.city_of_arrival && (
-                                  <div className="md:col-span-2">
-                                    <span className="block text-xs font-medium text-gray-600 mb-1">City of Arrival</span>
-                                    <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">
-                                      {(() => {
-                                        const cityMap = {
-                                          'CMN': 'Casablanca (CMN)',
-                                          'RAK': 'Marrakech (RAK)',
-                                          'FEZ': 'Fes (FEZ)',
-                                          'TNG': 'Tangier (TNG)',
-                                          'RBA': 'Rabat (RBA)',
-                                          'AGA': 'Agadir (AGA)',
-                                          'ESU': 'Essaouira (ESU)',
-                                          'OZZ': 'Ouarzazate (OZZ)',
-                                          'NDR': 'Nador (NDR)',
-                                          'OUD': 'Oujda (OUD)'
-                                        };
-                                        return cityMap[traveler.city_of_arrival] || traveler.city_of_arrival;
-                                      })()}
-                                    </span>
-                                  </div>
-                                )}
+                          {/* Travel Information */}
+                          <div className="mb-4">
+                            <span className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                              <span className="text-lg">✈️</span>
+                              Travel Information {traveler.has_different_travel ? '(Different Flight)' : '(Same as Main Group)'}
+                            </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <span className="block text-xs font-medium text-gray-600 mb-1">Arrival Date</span>
+                                <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">
+                                  {traveler.has_different_travel ? (traveler.arrival_date || 'Not specified') : (selectedClient.arrival_date || 'Not specified')}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-xs font-medium text-gray-600 mb-1">Departure Date</span>
+                                <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">
+                                  {traveler.has_different_travel ? (traveler.departure_date || 'Not specified') : (selectedClient.departure_date || 'Not specified')}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-xs font-medium text-gray-600 mb-1">Flight Number</span>
+                                <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">
+                                  {traveler.has_different_travel ? (traveler.flight_number || 'Not specified') : (selectedClient.flight_number || 'Not specified')}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-xs font-medium text-gray-600 mb-1">Arrival Time</span>
+                                <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">
+                                  {traveler.has_different_travel ? (traveler.arrival_time || 'Not specified') : (selectedClient.arrival_time || 'Not specified')}
+                                </span>
+                              </div>
+                              <div className="md:col-span-2">
+                                <span className="block text-xs font-medium text-gray-600 mb-1">City of Arrival</span>
+                                <span className="text-gray-900 bg-blue-50 px-3 py-1 rounded border text-sm">
+                                  {(() => {
+                                    const cityCode = traveler.has_different_travel ? traveler.city_of_arrival : selectedClient.city_of_arrival;
+                                    const cityMap = {
+                                      'CMN': 'Casablanca (CMN)',
+                                      'RAK': 'Marrakech (RAK)',
+                                      'FEZ': 'Fes (FEZ)',
+                                      'TNG': 'Tangier (TNG)',
+                                      'RBA': 'Rabat (RBA)',
+                                      'AGA': 'Agadir (AGA)',
+                                      'ESU': 'Essaouira (ESU)',
+                                      'OZZ': 'Ouarzazate (OZZ)',
+                                      'NDR': 'Nador (NDR)',
+                                      'OUD': 'Oujda (OUD)'
+                                    };
+                                    return cityMap[cityCode] || (cityCode || 'Not specified');
+                                  })()}
+                                </span>
                               </div>
                             </div>
-                          )}
+                          </div>
 
                           {/* Special Notes */}
                           {traveler.special_notes && (

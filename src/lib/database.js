@@ -240,6 +240,13 @@ export function getDatabase() {
   };
 }
 
+export function getTravelersByClientId(clientId) {
+  console.log('getTravelersByClientId called for client:', clientId);
+  const travelers = mockAdditionalTravelers.filter(t => t.client_id === clientId);
+  console.log('Found travelers:', travelers.length);
+  return travelers;
+}
+
 export function initializeDatabase() {
   console.log('initializeDatabase called');
 }
