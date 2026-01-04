@@ -463,6 +463,80 @@ export default function AdditionalTravelers({ travelers, setTravelers }) {
               )}
             </div>
 
+            {/* Accessibility Needs */}
+            <div className="mt-6">
+              <label className="block text-gray-800 font-semibold mb-4 text-base leading-tight">
+                Accessibility Needs
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-visible">
+                {['Wheelchair access', 'Visual assistance', 'Hearing assistance', 'Mobility support', 'Dietary accommodations', 'Medical equipment', 'Other'].map(option => (
+                  <label key={option} className="
+                    flex items-center gap-3
+                    px-4 py-3
+                    bg-white
+                    border-2 border-gray-300
+                    rounded-lg
+                    cursor-pointer
+                    transition-all duration-200
+                    hover:border-[#B5541B]
+                    hover:bg-orange-50
+                    has-[:checked]:border-[#B5541B]
+                    has-[:checked]:bg-orange-50
+                    has-[:checked]:ring-2
+                    has-[:checked]:ring-orange-200
+                    min-h-[50px]
+                    overflow-visible
+                  ">
+                    <input
+                      type="checkbox"
+                      checked={(traveler.accessibility_needs || []).includes(option)}
+                      onChange={(e) => {
+                        handleTravelerArrayChange(index, 'accessibility_needs', option, e.target.checked);
+                        // Clear other text if "Other" is deselected
+                        if (option === 'Other' && !e.target.checked) {
+                          handleTravelerChange(index, 'accessibility_needs_other', '');
+                        }
+                      }}
+                      className="w-5 h-5 text-[#B5541B] rounded focus:ring-2 focus:ring-[#B5541B] flex-shrink-0"
+                    />
+                    <span className="text-gray-900 font-medium leading-tight">♿ {option}</span>
+                  </label>
+                ))}
+              </div>
+              
+              {/* Other text input - shown when "Other" is selected */}
+              {(traveler.accessibility_needs || []).includes('Other') && (
+                <div className="mt-4">
+                  <label className="block text-gray-800 font-semibold mb-2 text-base leading-tight">
+                    Please specify your accessibility needs
+                  </label>
+                  <input
+                    type="text"
+                    value={traveler.accessibility_needs_other || ''}
+                    onChange={(e) => handleTravelerChange(index, 'accessibility_needs_other', e.target.value)}
+                    placeholder="Enter your accessibility needs..."
+                    className="
+                      w-full
+                      px-4 py-3.5
+                      text-gray-900
+                      font-medium
+                      bg-white
+                      border-2 border-gray-300
+                      rounded-xl
+                      placeholder:text-gray-400
+                      focus:border-[#B5541B]
+                      focus:ring-4
+                      focus:ring-orange-100
+                      focus:outline-none
+                      transition-all
+                      duration-200
+                      hover:border-gray-400
+                    "
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Special Notes */}
             <div className="mt-6">
               <label className="block text-gray-800 font-semibold mb-2 text-base leading-tight">

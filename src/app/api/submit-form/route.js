@@ -168,6 +168,14 @@ export async function POST(request) {
           )
         }
 
+        // Process traveler accessibility needs - include "Other" text if specified
+        let travelerAccessibilityNeeds = traveler.accessibility_needs || []
+        if (travelerAccessibilityNeeds.includes('Other') && traveler.accessibility_needs_other) {
+          travelerAccessibilityNeeds = travelerAccessibilityNeeds.map(item =>
+            item === 'Other' ? `Other: ${traveler.accessibility_needs_other}` : item
+          )
+        }
+
         const travelerData = {
           client_id: client.id,
           traveler_number: i + 2, // Traveler 2, 3, 4, etc.
@@ -177,6 +185,7 @@ export async function POST(request) {
           email: traveler.email || null,
           phone: traveler.phone || null,
           dietary_restrictions: travelerDietaryRestrictions,
+          accessibility_needs: travelerAccessibilityNeeds,
           special_notes: traveler.special_notes || '',
           has_different_travel: traveler.has_different_travel || false,
           arrival_date: traveler.arrival_date || null,

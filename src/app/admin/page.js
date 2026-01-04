@@ -289,6 +289,16 @@ export default function AdminDashboard() {
               return 'None';
             }
           })()]);
+          rows.push([`Traveler ${index + 2} Accessibility Needs`, (() => {
+            try {
+              const needs = typeof traveler.accessibility_needs === 'string'
+                ? JSON.parse(traveler.accessibility_needs || '[]')
+                : (traveler.accessibility_needs || []);
+              return needs.join('; ') || 'None';
+            } catch (e) {
+              return 'None';
+            }
+          })()]);
           rows.push([`Traveler ${index + 2} Special Notes`, traveler.special_notes || 'Not specified']);
         });
       }
@@ -1164,6 +1174,30 @@ export default function AdminDashboard() {
                                   ? restrictions.map(restriction => (
                                       <span key={restriction} className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium border border-orange-200">
                                         🥗 {restriction}
+                                      </span>
+                                    ))
+                                  : <span className="text-gray-500 italic">None specified</span>;
+                              })()}
+                            </div>
+                          </div>
+
+                          {/* Accessibility Needs */}
+                          <div className="mb-4">
+                            <span className="block text-sm font-semibold text-gray-700 mb-2">Accessibility Needs</span>
+                            <div className="flex flex-wrap gap-2">
+                              {(() => {
+                                let needs = [];
+                                try {
+                                  needs = typeof traveler.accessibility_needs === 'string'
+                                    ? JSON.parse(traveler.accessibility_needs || '[]')
+                                    : (traveler.accessibility_needs || []);
+                                } catch (e) {
+                                  needs = [];
+                                }
+                                return needs.length > 0
+                                  ? needs.map(need => (
+                                      <span key={need} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium border border-green-200">
+                                        ♿ {need}
                                       </span>
                                     ))
                                   : <span className="text-gray-500 italic">None specified</span>;

@@ -65,6 +65,7 @@ CREATE TABLE additional_travelers (
     email VARCHAR(255),
     phone VARCHAR(50),
     dietary_restrictions JSONB DEFAULT '[]'::jsonb,
+    accessibility_needs JSONB DEFAULT '[]'::jsonb,
     special_notes TEXT,
     has_different_travel BOOLEAN DEFAULT false,
     arrival_date DATE,
@@ -236,11 +237,11 @@ INSERT INTO clients (
 );
 
 -- Sample additional travelers
-INSERT INTO additional_travelers (client_id, traveler_number, name, age, relationship, email, phone, dietary_restrictions, special_notes) VALUES
-(2, 2, 'Mike Johnson', 8, 'Child', NULL, NULL, '[]'::jsonb, 'Child menu required, booster seat'),
-(2, 3, 'Emma Johnson', 6, 'Child', NULL, NULL, '[]'::jsonb, 'No spicy food'),
-(2, 4, 'Baby Johnson', 2, 'Child', NULL, NULL, '[]'::jsonb, 'Baby food and high chair needed'),
-(3, 2, 'Marie Dubois', 43, 'Spouse', 'marie.dubois@email.fr', '+33-6-98-76-54-32', '[]'::jsonb, 'Prefers window seat');
+INSERT INTO additional_travelers (client_id, traveler_number, name, age, relationship, email, phone, dietary_restrictions, accessibility_needs, special_notes) VALUES
+(2, 2, 'Mike Johnson', 8, 'Child', NULL, NULL, '[]'::jsonb, '[]'::jsonb, 'Child menu required, booster seat'),
+(2, 3, 'Emma Johnson', 6, 'Child', NULL, NULL, '[]'::jsonb, '[]'::jsonb, 'No spicy food'),
+(2, 4, 'Baby Johnson', 2, 'Child', NULL, NULL, '[]'::jsonb, '[]'::jsonb, 'Baby food and high chair needed'),
+(3, 2, 'Marie Dubois', 43, 'Spouse', 'marie.dubois@email.fr', '+33-6-98-76-54-32', '[]'::jsonb, '[]'::jsonb, 'Prefers window seat');
 
 -- Sample notes
 INSERT INTO client_notes (client_id, user_id, note) VALUES 
